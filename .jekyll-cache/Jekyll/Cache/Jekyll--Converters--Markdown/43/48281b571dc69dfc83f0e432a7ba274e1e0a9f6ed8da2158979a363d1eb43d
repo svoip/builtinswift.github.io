@@ -1,0 +1,47 @@
+I"�<p>Refresh control (<code class="language-plaintext highlighter-rouge">UIRefreshControl</code>) was introduced in iOS6, and it was meant to be used with table view controllers (<code class="language-plaintext highlighter-rouge">UITableViewController</code>).</p>
+
+<p>Table view controller manages the <code class="language-plaintext highlighter-rouge">position</code> and the <code class="language-plaintext highlighter-rouge">size</code> of the refresh control while we have to configure manually the <code class="language-plaintext highlighter-rouge">target</code> and <code class="language-plaintext highlighter-rouge">action</code>. A use case would look like this:</p>
+
+<p>This is what I had implemented back then in my table view controller.</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">UIRefreshControl</span> <span class="o">*</span><span class="n">refreshControl</span> <span class="o">=</span> <span class="p">[[</span><span class="n">UIRefreshControl</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+<span class="p">[</span><span class="n">refreshControl</span> <span class="nf">addTarget</span><span class="p">:</span><span class="n">self</span> <span class="nf">action</span><span class="p">:</span><span class="k">@selector</span><span class="p">(</span><span class="n">refreshing</span><span class="o">:</span><span class="p">)</span>
+ <span class="n">forControlEvents</span><span class="o">:</span><span class="n">UIControlEventValueChanged</span><span class="p">];</span>
+<span class="p">[</span><span class="n">self</span><span class="p">.</span><span class="n">tableView</span> <span class="nf">addSubview</span><span class="p">:</span><span class="n">refreshControl</span><span class="p">];</span>
+ 
+<span class="k">-</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nf">refreshing</span><span class="p">:(</span><span class="n">UIRefreshControl</span> <span class="o">*</span><span class="p">)</span><span class="nv">aRefreshControl</span>
+<span class="p">{</span>
+ <span class="c1">// start off asynchronous work, like, network calls</span>
+ <span class="c1">//..</span>
+ <span class="c1">// close the refresh control when done</span>
+ <span class="c1">// ! assure that it is the main thread</span>
+ <span class="p">[</span><span class="n">aRefreshControl</span> <span class="nf">endRefreshing</span><span class="p">];</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>iOS 10.0 introduces a new protocol, <code class="language-plaintext highlighter-rouge">UIRefreshControlHosting</code>, which is a common interface to use refresh control. The protocol has only one property; scroll view and table view controller adopt this protocol, as such, these 2 classes support refresh control “out of the box”. Same as before, the <code class="language-plaintext highlighter-rouge">position</code> and the <code class="language-plaintext highlighter-rouge">size</code> of the control is handled by the system.</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">UIRefreshControlHosting</span>
+<span class="c1">//the only property to adopt</span>
+<span class="p">.</span><span class="n">refreshControl</span></code></pre></figure>
+
+<p>An implementation in Swift looks like this:</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="k">let</span> <span class="nv">refreshControl</span> <span class="o">=</span> <span class="kt">UIRefreshControl</span><span class="o">.</span><span class="nf">init</span><span class="p">()</span>
+<span class="k">let</span> <span class="nv">attributes</span> <span class="o">=</span> <span class="p">[</span><span class="kt">NSForegroundColorAttributeName</span><span class="p">:</span> <span class="kt">UIColor</span><span class="o">.</span><span class="nf">black</span><span class="p">()]</span>
+<span class="k">let</span> <span class="nv">attributedString</span> <span class="o">=</span> <span class="kt">AttributedString</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"Loading..."</span><span class="p">,</span> <span class="nv">attributes</span><span class="p">:</span> <span class="n">attributes</span><span class="p">)</span>
+<span class="n">refreshControl</span><span class="o">.</span><span class="n">attributedTitle</span> <span class="o">=</span> <span class="n">attributedString</span>
+<span class="n">refreshControl</span><span class="o">.</span><span class="n">tintColor</span> <span class="o">=</span> <span class="kt">UIColor</span><span class="o">.</span><span class="nf">red</span><span class="p">()</span>
+<span class="n">refreshControl</span><span class="o">.</span><span class="nf">addTarget</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="nv">action</span><span class="p">:</span> <span class="kd">#selector(</span><span class="nf">refreshing</span><span class="kd">)</span><span class="p">,</span> <span class="nv">for</span><span class="p">:</span> <span class="o">.</span><span class="n">valueChanged</span><span class="p">)</span>
+<span class="c1">// attach it to scrollview</span>
+<span class="n">scrollView</span><span class="o">.</span><span class="n">refreshControl</span> <span class="o">=</span> <span class="n">refreshControl</span>
+ 
+<span class="kd">func</span> <span class="nf">refreshing</span><span class="p">(){</span>
+  <span class="c1">// asynchronous work, like network calls</span>
+  <span class="c1">//..</span>
+  <span class="c1">// close the refresh control when done</span>
+  <span class="k">self</span><span class="o">.</span><span class="n">scrollView</span><span class="o">.</span><span class="n">refreshControl</span><span class="p">?</span><span class="o">.</span><span class="nf">endRefreshing</span><span class="p">()</span>
+<span class="p">}</span></code></pre></figure>
+
+<p><img src="/images/refresh-control.png" alt="image-title-here" class="img-responsive" /></p>
+
+:ET

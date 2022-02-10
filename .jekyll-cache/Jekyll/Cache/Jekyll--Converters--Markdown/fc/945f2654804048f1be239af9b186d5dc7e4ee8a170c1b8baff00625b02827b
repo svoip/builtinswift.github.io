@@ -1,0 +1,132 @@
+I"�.<p>When we use NSURLSession API, how our apps will be notified about the incoming HTTP responses largely depend on:</p>
+
+<ul>
+  <li>how we configure “url session”, and,</li>
+  <li>how we configure each single “url session data task”</li>
+</ul>
+
+<h3 id="nsurlsession">NSURLSession</h3>
+<p>First, we need to create a url session object. We pass in parameters such as delegate (the entry point for handling most of, if not all, incoming responses) and queue (the operation queue on which the responses will be presented to our app).</p>
+
+<p>Why would we want to specify the queue? Shouldn’t we always use the main queue?</p>
+
+<p>Suppose, we want to do some processing on the incoming data before presenting it to the user (for example, querying database and figuring out if we have already consumed such data), so we should opt for a background queue, which is also the default setting.</p>
+
+<p>For example:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">NSURLSessionConfiguration</span> <span class="o">*</span><span class="n">config</span><span class="p">;</span>
+<span class="n">NSOperationQueue</span> <span class="o">*</span><span class="n">queue</span><span class="p">;</span>
+<span class="n">NSURLSession</span> <span class="o">*</span><span class="n">session</span><span class="p">;</span>
+ 
+<span class="n">config</span> <span class="o">=</span> <span class="p">[</span><span class="n">NSURLSessionConfiguration</span> <span class="nf">defaultSessionConfiguration</span><span class="p">];</span>
+ 
+<span class="c1">// Possible 'queue' options:</span>
+<span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="n">NSOperationQueue</span> <span class="nf">mainQueue</span><span class="p">];</span>
+<span class="c1">//queue = [NSOperationQueue new];</span>
+<span class="c1">//queue = nil; it is equivalent to the above line</span>
+ 
+<span class="n">session</span> <span class="o">=</span> <span class="p">[</span><span class="n">NSURLSession</span> <span class="nf">sessionWithConfiguration</span><span class="p">:</span><span class="n">config</span> <span class="nf">delegate</span><span class="p">:</span><span class="n">self</span> <span class="n">delegateQueue</span><span class="o">:</span><span class="n">queue</span><span class="p">];</span>
+ 
+<span class="c1">// In this example, we are expecting the responses on the main queue</span>
+<span class="c1">// and the delegate is 'self'</span></code></pre></figure>
+
+<p>, or a rather simple setting:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">NSURLSession</span> <span class="o">*</span><span class="n">session</span><span class="p">;</span>
+<span class="n">session</span> <span class="o">=</span> <span class="p">[</span><span class="n">NSURLSession</span> <span class="nf">sharedSession</span><span class="p">];</span>
+
+<span class="c1">// Here both ‘queue’ and ‘delegate’ are nil,</span>
+<span class="c1">// ..so it is assumed, in such cases, that down the road we use</span>
+<span class="c1">// ..completion handler APIs (discussed below)</span></code></pre></figure>
+
+<h3 id="data-task">Data task</h3>
+<p>Then we need to configure a single request when we initialize a data task.</p>
+
+<p>For example:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">NSURLSessionUploadTask</span> <span class="o">*</span><span class="n">uploadTask</span><span class="p">;</span>
+<span class="n">NSURL</span> <span class="o">*</span><span class="n">fileURL</span> <span class="o">=</span> <span class="p">...;</span>
+<span class="n">NSMutableRequest</span> <span class="o">*</span><span class="n">request</span> <span class="o">=</span> <span class="p">...;</span>
+<span class="n">uploadTask</span> <span class="o">=</span> <span class="p">[</span><span class="n">session</span> <span class="nf">uploadTaskWithRequest</span><span class="p">:</span><span class="n">request</span> <span class="nf">fromFile</span><span class="p">:</span><span class="n">fileURL</span><span class="p">];</span>
+<span class="p">[</span><span class="n">uploadTask</span> <span class="nf">resume</span><span class="p">];</span>
+<span class="c1">// for this upload task 'delegate' methods will be called</span>
+<span class="c1">//..(if we have set any delegate object and implemented the</span>
+<span class="c1">//..delegate methods)</span>
+ 
+<span class="c1">// OR</span>
+ 
+<span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">^</span><span class="n">RequestCompletionHandler</span><span class="p">)(</span><span class="n">NSData</span> <span class="o">*</span><span class="n">data</span><span class="p">,</span> <span class="n">NSURLResponse</span> <span class="o">*</span><span class="n">response</span><span class="p">,</span> <span class="n">NSError</span> <span class="o">*</span><span class="n">error</span><span class="p">);</span>
+<span class="n">RequestCompletionHandler</span> <span class="n">completionHandler</span> <span class="o">=</span> <span class="p">...;</span>
+<span class="n">uploadTask</span> <span class="o">=</span> <span class="p">[</span><span class="n">session</span> <span class="nf">uploadTaskWithRequest</span><span class="p">:</span><span class="n">request</span> <span class="nf">fromFile</span><span class="p">:</span><span class="n">fileURL</span> <span class="n">completionHandler</span><span class="o">:</span><span class="n">completionHandler</span><span class="p">];</span>
+<span class="p">[</span><span class="n">uploadTask</span> <span class="nf">resume</span><span class="p">];</span>
+<span class="c1">// for this upload task, the 'completion handler' will be called</span></code></pre></figure>
+
+<p>Question arises:</p>
+
+<ul>
+  <li>What happens if we don’t set any delegate, and we don’t use a completion handler for a task?</li>
+</ul>
+
+<p>System won’t inform us about the networking result. We shouldn’t be doing this, as it would make no sense.</p>
+
+<ul>
+  <li>What happens if we specify both the delegate and a completion handler?</li>
+</ul>
+
+<p>This is rather interesting.</p>
+
+<p>We will be informed by both delegate methods and the completion handler, though completion handlers can do only a portion of what delegate methods can do for us. In such cases, completion handlers substitute this sole method of <code class="language-plaintext highlighter-rouge">NSURLSessionTaskDelegate</code> protocol (Note that this is the “super” protocol for all the task types):</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// Tells the delegate that the task finished transferring data.</span>
+<span class="n">URLSession</span><span class="o">:</span><span class="n">task</span><span class="o">:</span><span class="n">didCompleteWithError</span><span class="o">:</span></code></pre></figure>
+
+<p>So, possible set of steps (for uploading task) may look like this:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// data task is prepared and request started</span>
+<span class="n">a</span><span class="p">)</span> <span class="n">URLSession</span><span class="o">:</span> <span class="n">task</span><span class="o">:</span> <span class="n">didSendBodyData</span><span class="o">:</span> <span class="n">totalBytesSent</span><span class="o">:</span> <span class="n">totalBytesExpectedToSend</span><span class="o">:</span>
+<span class="p">(</span><span class="n">called</span> <span class="n">multiple</span> <span class="n">times</span> <span class="n">as</span> <span class="n">necessary</span><span class="p">)</span>
+<span class="n">b</span><span class="p">)</span> <span class="n">URLSession</span><span class="o">:</span> <span class="n">dataTask</span><span class="o">:</span> <span class="n">didReceiveData</span><span class="o">:</span> 
+<span class="n">c</span><span class="p">)</span> <span class="n">URLSession</span><span class="o">:</span> <span class="n">task</span><span class="o">:</span> <span class="n">didCompleteWithError</span><span class="o">:</span> 
+<span class="p">...</span></code></pre></figure>
+
+<p>or,</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// data task is prepared and request started</span>
+<span class="n">a</span><span class="p">)</span> <span class="n">URLSession</span><span class="o">:</span> <span class="n">task</span><span class="o">:</span> <span class="n">didSendBodyData</span><span class="o">:</span> <span class="n">totalBytesSent</span><span class="o">:</span> <span class="n">totalBytesExpectedToSend</span><span class="o">:</span> 
+<span class="p">(</span><span class="n">called</span> <span class="n">multiple</span> <span class="n">times</span> <span class="n">as</span> <span class="n">necessary</span><span class="p">)</span>
+<span class="n">b</span><span class="p">)</span> <span class="n">URLSession</span><span class="o">:</span> <span class="n">dataTask</span><span class="o">:</span> <span class="n">didReceiveData</span><span class="o">:</span> 
+<span class="n">c</span><span class="p">)</span> <span class="n">the</span> <span class="n">completion</span> <span class="n">handler</span> <span class="n">invoked</span>
+<span class="p">...</span></code></pre></figure>
+
+<p>But the real power of using a delegate is when there are extra layers (such as authentication, caching, progress handling, etc) and when we have to use a background session (which wouldn’t be possible without the use of delegates).</p>
+
+<h3 id="additional-notes">Additional notes</h3>
+<h4 id="completion-handler-and-background-session">Completion handler and background session</h4>
+
+<p>Calling “completion handler based” APIs with background sessions results in runtime error:</p>
+
+<blockquote>
+  <p>Terminating app due to uncaught exception NSGenericException, 
+reason: Completion handler blocks are not supported in background sessions. 
+Use a delegate instead.</p>
+</blockquote>
+
+<p>It seems that it is just an NSAssert. It would be better if it were a compile time error rather than a runtime error, thus notifying developers early on.</p>
+
+<h4 id="client-side-errors">Client-side errors</h4>
+<p>Errors returned through delegate methods or completion handlers refer to client-side only.</p>
+
+<p>Recently I was trying to upload an image using uploadTaskWithRequest:fromFile:, and the url of the file to upload was resolving to <code class="language-plaintext highlighter-rouge">nil</code>. 
+The system would then cancel the request right away with a log:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">Error</span> <span class="n">Domain</span><span class="o">=</span><span class="n">NSURLErrorDomain</span> <span class="n">Code</span><span class="o">=-</span><span class="mi">999</span> <span class="s">"cancelled"</span> 
+<span class="n">UserInfo</span><span class="o">=</span><span class="p">{</span><span class="n">NSErrorFailingURLKey</span><span class="o">=</span><span class="n">http</span><span class="o">:</span><span class="c1">//&lt;my-url&gt;, </span>
+<span class="n">NSErrorFailingURLStringKey</span><span class="o">=</span><span class="n">http</span><span class="o">:</span><span class="c1">//&lt;my-url&gt;, </span>
+<span class="n">NSLocalizedDescription</span><span class="o">=</span><span class="n">cancelled</span></code></pre></figure>
+
+<p>It would have been better if the log was more informative, like “the request is cancelled because there was no file to upload”. It just means that we have to add more checks in our code, rather than relying on errors or logs from the system.</p>
+
+<h4 id="server-side-errors">Server-side errors</h4>
+
+<p>To learn existance of a server-side error, we need to downcast NSURLResponse object to NSHTTPURLResponse and query its <code class="language-plaintext highlighter-rouge">statusCode</code>.</p>
+:ET

@@ -1,0 +1,107 @@
+I"�6<p>How can we bind UIButton to an action in a single line code?</p>
+
+<p>Recently I was creating a “compound UI components” architecture with different view levels. I prepare configuration objects with necessary configuration info, and at runtime UIKit elements are constructed on the basis of the passed in parameters. For labels and views that only read and display data there was no hussle.</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="k">let</span> <span class="nv">compoundObj</span> <span class="o">=</span> <span class="kt">MyCompoundObj</span><span class="p">(</span>
+	<span class="nv">text</span><span class="p">:</span> <span class="s">"Text to display in a label"</span><span class="p">,</span>  
+	<span class="nv">color</span><span class="p">:</span> <span class="kt">UIColor</span><span class="o">.</span><span class="n">red</span> <span class="c1">// color background for a view</span>
+	 <span class="p">)</span>
+<span class="n">array</span><span class="o">.</span><span class="nf">append</span><span class="p">(</span><span class="n">compoundObj</span><span class="p">)</span>
+
+
+<span class="o">...</span>
+<span class="k">let</span> <span class="nv">compoundObj</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// get compound object at an index</span>
+<span class="k">let</span> <span class="nv">label</span> <span class="o">=</span> <span class="kt">UILabel</span><span class="p">()</span>
+<span class="n">label</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">configObj</span><span class="o">.</span><span class="n">text</span>
+<span class="n">view</span><span class="o">.</span><span class="nf">addSubview</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+<span class="o">...</span></code></pre></figure>
+
+<p>But for buttons and their callbacks I encountered the following problem.</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="k">let</span> <span class="nv">compound</span> <span class="o">=</span> <span class="kt">MyCompoundObj</span><span class="p">(</span>
+	<span class="nv">text</span><span class="p">:</span> <span class="s">"Text to display in a label"</span><span class="p">,</span>  
+	<span class="nv">color</span><span class="p">:</span> <span class="kt">UIColor</span><span class="o">.</span><span class="n">red</span><span class="p">,</span>
+	<span class="nv">btnTitle</span><span class="p">:</span> <span class="s">"Click me!"</span><span class="p">,</span>
+	<span class="nv">btnCallback</span><span class="p">:</span> <span class="o">&lt;</span><span class="kd">some</span> <span class="n">closure</span> <span class="n">to</span> <span class="n">bind</span> <span class="n">with</span> <span class="n">a</span> <span class="n">button</span><span class="o">&gt;</span>
+	 <span class="p">)</span>
+<span class="n">array</span><span class="o">.</span><span class="nf">append</span><span class="p">(</span><span class="n">compoundObj</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">compoundObj</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// get compound object at an index</span>
+<span class="k">let</span> <span class="nv">button</span> <span class="o">=</span> <span class="kt">UIButton</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="o">.</span><span class="n">custom</span><span class="p">)</span>
+<span class="n">button</span><span class="o">.</span><span class="nf">setTitle</span><span class="p">(</span><span class="n">compoundObj</span><span class="o">.</span><span class="n">btnTitle</span><span class="p">),</span> <span class="k">for</span><span class="o">.</span><span class="n">normal</span>
+<span class="n">button</span><span class="o">.</span><span class="n">addTarget</span><span class="o">...</span> <span class="n">what</span> <span class="p">?</span><span class="o">!!</span></code></pre></figure>
+
+<p>I encountered <a href="http://stackoverflow.com/questions/25919472/adding-a-closure-as-target-to-a-uibutton/30518764" target="_blank">this post</a> on stackoverflow, that describes how to implement this.</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="kd">extension</span> <span class="kt">UIButton</span> <span class="p">{</span>
+<span class="kd">private</span> <span class="kd">func</span> <span class="nf">actionHandleBlock</span><span class="p">(</span><span class="nv">action</span><span class="p">:(()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)?</span> <span class="o">=</span> <span class="kc">nil</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">struct</span> <span class="n">__</span> <span class="p">{</span>
+        <span class="kd">static</span> <span class="k">var</span> <span class="nv">action</span> <span class="p">:(()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)?</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">action</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="n">__</span><span class="o">.</span><span class="n">action</span> <span class="o">=</span> <span class="n">action</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">__</span><span class="o">.</span><span class="nf">action</span><span class="p">?()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">@objc</span> <span class="kd">private</span> <span class="kd">func</span> <span class="nf">triggerActionHandleBlock</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">self</span><span class="o">.</span><span class="nf">actionHandleBlock</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">actionHandle</span><span class="p">(</span><span class="n">controlEvents</span> <span class="nv">control</span> <span class="p">:</span><span class="kt">UIControlEvents</span><span class="p">,</span> <span class="kt">ForAction</span> <span class="nv">action</span><span class="p">:()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">self</span><span class="o">.</span><span class="nf">actionHandleBlock</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+    <span class="k">self</span><span class="o">.</span><span class="nf">addTarget</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="nv">action</span><span class="p">:</span> <span class="s">"triggerActionHandleBlock"</span><span class="p">,</span> <span class="nv">forControlEvents</span><span class="p">:</span> <span class="n">control</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="o">...</span> 
+<span class="k">let</span> <span class="nv">button</span> <span class="o">=</span> <span class="kt">UIButton</span><span class="p">()</span>
+<span class="n">button</span><span class="o">.</span><span class="nf">actionHandle</span><span class="p">(</span><span class="nv">controlEvents</span><span class="p">:</span> <span class="kt">UIControlEvents</span><span class="o">.</span><span class="kt">TouchUpInside</span><span class="p">,</span> <span class="kt">ForAction</span><span class="p">:</span> <span class="o">&lt;</span><span class="kd">some</span> <span class="n">closure</span><span class="o">&gt;</span><span class="p">)</span></code></pre></figure>
+
+<p>And it worked really great.</p>
+
+<p>Until I found out that with multiple instances of buttons this implementation won’t work. It is implemented as an extension, and there is really one single property to hold onto the closure. However many buttons are created and assigned a closure each, the last closure would override all and whichever button is clicked one single closure would be called.</p>
+
+<p>I decided to subclass UIButton, thus each button instance would have its own ‘inner property’ to hold onto the closure.</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="kd">typealias</span> <span class="kt">ButtonClick</span> <span class="o">=</span> <span class="p">(</span><span class="kt">Void</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span>
+
+<span class="c1">// Multiple instances of button have multiple closures (rather than one with the below implementation)</span>
+<span class="kd">class</span> <span class="kt">ClosureButton</span><span class="p">:</span> <span class="kt">UIButton</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="nv">action</span><span class="p">:</span> <span class="kt">ButtonClick</span><span class="p">?</span>
+    <span class="kd">private</span> <span class="kd">func</span> <span class="nf">actionHandleBlock</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span><span class="kt">ButtonClick</span><span class="p">?</span> <span class="o">=</span> <span class="kc">nil</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">action</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">self</span><span class="o">.</span><span class="n">action</span> <span class="o">=</span> <span class="n">action</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">self</span><span class="o">.</span><span class="nf">action</span><span class="p">?()</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    
+    <span class="kd">@objc</span> <span class="kd">private</span> <span class="kd">func</span> <span class="nf">triggerActionHandleBlock</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">self</span><span class="o">.</span><span class="nf">actionHandleBlock</span><span class="p">()</span>
+    <span class="p">}</span>
+    
+    <span class="kd">func</span> <span class="nf">actionHandle</span><span class="p">(</span><span class="n">controlEvents</span> <span class="nv">control</span><span class="p">:</span><span class="kt">UIControlEvents</span><span class="p">,</span> <span class="n">forAction</span> <span class="nv">action</span><span class="p">:</span><span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">self</span><span class="o">.</span><span class="nf">actionHandleBlock</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="n">action</span><span class="p">)</span>
+        <span class="k">self</span><span class="o">.</span><span class="nf">addTarget</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="nv">action</span><span class="p">:</span> <span class="kd">#selector(</span><span class="nf">self.triggerActionHandleBlock</span><span class="kd">)</span><span class="p">,</span> <span class="nv">for</span><span class="p">:</span> <span class="n">control</span><span class="p">)</span>
+    <span class="p">}</span>
+    
+<span class="p">}</span></code></pre></figure>
+
+<p>Now my problem is solved like so:</p>
+
+<figure class="highlight"><pre><code class="language-swift" data-lang="swift"><span class="k">let</span> <span class="nv">compound</span> <span class="o">=</span> <span class="kt">MyCompoundObj</span><span class="p">(</span>
+	<span class="nv">text</span><span class="p">:</span> <span class="s">"Text to display in a label"</span><span class="p">,</span>  
+	<span class="nv">color</span><span class="p">:</span> <span class="kt">UIColor</span><span class="o">.</span><span class="n">red</span><span class="p">,</span>
+	<span class="nv">btnTitle</span><span class="p">:</span> <span class="s">"Click me!"</span><span class="p">,</span>
+	<span class="nv">btnCallback</span><span class="p">:</span> <span class="o">&lt;</span><span class="kd">some</span> <span class="n">closure</span> <span class="n">to</span> <span class="n">bind</span> <span class="n">with</span> <span class="n">a</span> <span class="n">button</span><span class="o">&gt;</span>
+	 <span class="p">)</span>
+<span class="n">array</span><span class="o">.</span><span class="nf">append</span><span class="p">(</span><span class="n">compoundObj</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">compoundObj</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// get compound object at an index</span>
+<span class="k">let</span> <span class="nv">button</span> <span class="o">=</span> <span class="kt">UIButton</span><span class="o">.</span><span class="nf">init</span><span class="p">(</span><span class="o">.</span><span class="n">custom</span><span class="p">)</span>
+<span class="n">button</span><span class="o">.</span><span class="nf">setTitle</span><span class="p">(</span><span class="n">compoundObj</span><span class="o">.</span><span class="n">btnTitle</span><span class="p">),</span> <span class="k">for</span><span class="o">.</span><span class="n">normal</span>
+<span class="n">button</span><span class="o">.</span><span class="nf">actionHandle</span><span class="p">(</span><span class="nv">controlEvents</span><span class="p">:</span> <span class="o">.</span><span class="n">touchUpInside</span><span class="p">,</span> <span class="nv">forAction</span><span class="p">:</span> <span class="n">compoundObj</span><span class="o">.</span><span class="n">btnCallback</span><span class="p">)</span></code></pre></figure>
+
+:ET

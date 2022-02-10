@@ -1,0 +1,154 @@
+I"�4<p>Even though we have been writing code exclusively with ARC for a while now, Cocoa frameworks were created before ARC itself came into existence.</p>
+
+<p>But Apple has been updating these frameworks in a rigorous way. Below we will some examples of such changes. But, let’s see the basics first.</p>
+
+<h2 id="arc-basics">ARC basics</h2>
+
+<p>ARC is a compiler feature that removes the burden of memory management from developers. With ARC, we don’t have to (actually we cannot) <code class="language-plaintext highlighter-rouge">retain</code> or <code class="language-plaintext highlighter-rouge">release</code> objects, but we can define our objects’ lifetime using attributes like <code class="language-plaintext highlighter-rouge">strong</code> or <code class="language-plaintext highlighter-rouge">weak</code>.</p>
+
+<p>With a <code class="language-plaintext highlighter-rouge">strong</code>ly declared property attribute, we imply that “we are strongly interested in keeping this object in the heap”. Such declaration retains the new object on assignment:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// inside a custom class</span>
+<span class="k">@interface</span> <span class="nc">MyCustomClass</span><span class="p">()</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">strong</span><span class="p">)</span> <span class="n">Foo</span> <span class="o">*</span><span class="n">foo</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">MyCustomClass</span>
+<span class="n">Foo</span> <span class="o">*</span><span class="n">foo</span> <span class="o">=</span> <span class="p">[</span><span class="n">Foo</span> <span class="nf">new</span><span class="p">];</span>
+<span class="n">self</span><span class="p">.</span><span class="n">foo</span> <span class="o">=</span> <span class="n">foo</span><span class="p">;</span>
+<span class="c1">//self is strongly interested in 'foo' object</span>
+<span class="c1">//the retain count of 'foo' object now is 1</span>
+
+<span class="n">anotherCustomObj</span><span class="p">.</span><span class="n">foo</span> <span class="o">=</span> <span class="n">foo</span><span class="p">;</span>
+<span class="c1">//anotherCustomObj is strongly interested in 'foo' object as well</span>
+<span class="c1">//the retain count of 'foo' object now is 2</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>With a <code class="language-plaintext highlighter-rouge">weak</code> declaration we imply that “we are interested in this object as long as someone else is keeping it alive for us”. Such declaration will not retain the new object on assignment, yet it sets the pointer to <code class="language-plaintext highlighter-rouge">nil</code> when the referred object is deallocated.</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// inside a custom class</span>
+<span class="k">@interface</span> <span class="nc">MyCustomClass</span><span class="p">()</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">weak</span><span class="p">)</span> <span class="n">Foo</span> <span class="o">*</span><span class="n">foo</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">MyCustomClass</span>
+<span class="n">Foo</span> <span class="o">*</span><span class="n">foo</span> <span class="o">=</span> <span class="p">[</span><span class="n">Foo</span> <span class="nf">new</span><span class="p">];</span>
+<span class="n">self</span><span class="p">.</span><span class="n">foo</span> <span class="o">=</span> <span class="n">foo</span><span class="p">;</span> 
+<span class="c1">// self won't care if 'foo' instance isn't kept around </span>
+<span class="c1">// and won't throw error on such occasions </span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>Both attributes have been introduced as part of ARC in the past years. Their roughly equivalents in non-ARC code are <code class="language-plaintext highlighter-rouge">retain</code> and <code class="language-plaintext highlighter-rouge">assign</code> (although <code class="language-plaintext highlighter-rouge">assign</code> doesn’t set pointer to <code class="language-plaintext highlighter-rouge">nil</code> when deallocated). <code class="language-plaintext highlighter-rouge">Retain</code> and <code class="language-plaintext highlighter-rouge">assign</code> declarations exist in Cocoa classes even today. We have to pay attention how such classes are implemented in order to avoid memory related pitfalls.</p>
+
+<h2 id="recent-sdk-changes">Recent SDK changes</h2>
+
+<h4 id="uitableview">UITableView</h4>
+
+<p>Consider the following example. 
+Let’s say that we are running it on an iOS 8.0 environment. We set the data source for our table view without keeping a reference to it:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// inside a custom table view controller</span>
+<span class="k">@interface</span> <span class="nc">CustomTableViewController</span><span class="p">()</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">strong</span><span class="p">)</span> <span class="n">DataSource</span> <span class="o">*</span><span class="n">dataSource</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">CustomTableViewController</span>
+<span class="k">-</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">viewDidLoad</span>
+<span class="p">{</span>
+  <span class="n">DataSource</span> <span class="o">*</span><span class="n">ds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">DataSource</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">tableView</span><span class="p">.</span><span class="n">dataSource</span> <span class="o">=</span> <span class="n">ds</span><span class="p">;</span>
+  <span class="c1">// ...</span>
+  <span class="c1">// missing line!</span>
+  <span class="c1">// self.dataSource = ds;</span>
+<span class="p">}</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>By the time this method returns, <code class="language-plaintext highlighter-rouge">ds</code> will be deallocated. When the table view starts querying its <code class="language-plaintext highlighter-rouge">.dataSource</code> property, app will crash with <code class="language-plaintext highlighter-rouge">EXC_BAD_ACCESS</code>.</p>
+
+<p><img src="/images/exc_bad_access.png" alt="image-title-here" class="img-responsive" /></p>
+
+<p>When we edit the scheme of our app and enable NSZombies under Diagnostics, we can clearly see what caused the crash. It is a “message sent to a deallocated object” exception.</p>
+
+<p><img src="/images/datasource.png" alt="image-title-here" class="img-responsive" /></p>
+
+<p>Running the same code on an iOS 9.0 environment has a slightly different consequence: it won’t crash. The table view won’t display anything since its data source has been deallocated, but the good thing is that it won’t crash either.</p>
+
+<p>Why?</p>
+
+<p>Because the way table view keeps reference to its data source has been changed in UIKit. Up until iOS 8.0 it used to be:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">assign</span><span class="p">)</span> <span class="n">id</span><span class="o">&lt;</span><span class="n">UITableViewDataSource</span><span class="o">&gt;</span> <span class="n">dataSource</span></code></pre></figure>
+
+<p>but since iOS 9.0 it is:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">weak</span><span class="p">,</span> <span class="n">nullable</span><span class="p">)</span> <span class="n">id</span><span class="o">&lt;</span><span class="n">UITableViewDataSource</span><span class="o">&gt;</span> <span class="n">dataSource</span></code></pre></figure>
+
+<p>The new UIKit behavior is more “tolerant”: if <code class="language-plaintext highlighter-rouge">dataSource</code> is still there when the table view is loaded up, the table view will call query it in order to populate cells; otherwise no effect.</p>
+
+<p>Let’s see what these definitions “translate” into in real time:</p>
+
+<p>iOS 8.0:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// inside a custom table view controller</span>
+<span class="k">@interface</span> <span class="nc">CustomTableViewController</span><span class="p">()</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">strong</span><span class="p">)</span> <span class="n">DataSource</span> <span class="o">*</span><span class="n">dataSource</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">CustomTableViewController</span>
+<span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">viewDidLoad</span>
+<span class="p">{</span>
+  <span class="n">DataSource</span> <span class="o">*</span><span class="n">ds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">DataSource</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+  <span class="c1">// the tableView's .dataSource property is assigned</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">tableView</span><span class="p">.</span><span class="n">dataSource</span> <span class="o">=</span> <span class="n">ds</span><span class="p">;</span>
+ 
+  <span class="c1">//...</span>
+  <span class="c1">// missing line!</span>
+  <span class="c1">// self.dataSource = ds;</span>
+ 
+  <span class="c1">// the 'ds' data source object will be deallocated now, </span>
+  <span class="c1">// WHILE the tableView's .dataSource remains assigned </span>
+<span class="p">}</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>iOS 9.0:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="c1">// inside a custom table view controller</span>
+<span class="k">@interface</span> <span class="nc">CustomTableViewController</span><span class="p">()</span>
+<span class="k">@property</span> <span class="p">(</span><span class="n">strong</span><span class="p">)</span> <span class="n">DataSource</span> <span class="o">*</span><span class="n">dataSource</span><span class="p">;</span>
+<span class="k">@end</span>
+
+<span class="k">@implementation</span> <span class="nc">CustomTableViewController</span>
+<span class="k">-</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">viewDidLoad</span>
+<span class="p">{</span>
+  <span class="n">DataSource</span> <span class="o">*</span><span class="n">ds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">DataSource</span> <span class="nf">alloc</span><span class="p">]</span> <span class="nf">init</span><span class="p">];</span>
+  <span class="c1">// the tableView's .dataSource property is assigned</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">tableView</span><span class="p">.</span><span class="n">dataSource</span> <span class="o">=</span> <span class="n">ds</span><span class="p">;</span>
+   
+  <span class="c1">// ...</span>
+  <span class="c1">// missing line!</span>
+  <span class="c1">// self.dataSource = ds;</span>
+   
+  <span class="c1">// 'ds' data source object will be deallocated now,</span>
+  <span class="c1">// and the tableView's .dataSource will be set to nil</span>
+<span class="p">}</span>
+<span class="k">@end</span></code></pre></figure>
+
+<p>Following this <a href="https://developer.apple.com/library/content/releasenotes/General/iOS90APIDiffs/Objective-C/UIKit.html" target="_blank">link</a>, you can find UIKit’s several other changes in iOS 9.0, like:</p>
+
+<figure class="highlight"><pre><code class="language-objc" data-lang="objc"><span class="n">UITableViewDelegate</span>
+<span class="n">UIAccelerometerDelegate</span>
+<span class="n">UICollectionViewDataSource</span>
+<span class="n">UICollisionBehaviorDelegate</span>
+<span class="n">UIDocumentInteractionControllerDelegate</span>
+<span class="n">UIGestureRecognizerDelegate</span>
+<span class="n">UINavigationControllerDelegate</span>
+<span class="n">UIImagePickerControllerDelegate</span>
+<span class="n">UIPickerViewDataSource</span>
+<span class="n">UIPickerViewDelegate</span>
+<span class="n">UIPopoverControllerDelegate</span></code></pre></figure>
+
+<h3 id="nsnotificationcenter">NSNotificationCenter</h3>
+
+<p>In pre-iOS 9.0 environments, notification center used to use <code class="language-plaintext highlighter-rouge">assign</code> attribute in relation to its observers. If any of the observers has been deallocated while notification is emitted, then crash was guaranteed. Thanks to the latest SDK changes, we don’t have to keep strong references to observers anymore.</p>
+
+:ET

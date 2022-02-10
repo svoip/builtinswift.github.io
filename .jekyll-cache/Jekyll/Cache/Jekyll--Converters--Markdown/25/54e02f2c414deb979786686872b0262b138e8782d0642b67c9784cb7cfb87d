@@ -1,0 +1,173 @@
+I"<$<p>Cocoapods is not only about consuming public pods. We can create and manage our own pods and share them with different team of developers.</p>
+
+<p>Cocoapods can even help organize dependencies and architectural design (<a href="http://product.hubspot.com/blog/architecting-a-large-ios-app-with-cocoapods" target="_blank">check out how they did</a>). I was inspired by this blog, and through a research, I collected some suggestions for those, who have struggled to grasp the main picture, can follow along.</p>
+
+<h2 id="basics">Basics</h2>
+
+<p>Cocoapods uses a thin “configuration setting”, <code class="language-plaintext highlighter-rouge">specs</code>, in order to group together a set of pods (or say “dependency libraries”). It groups them by name, tag and source location. A copy of the specs is hosted on a remote server so that it is visible to different developers, while a local copy is kept for offline referencing.</p>
+
+<p>Using a real life analogy, <code class="language-plaintext highlighter-rouge">podfile</code> is “a shopping list”, and <code class="language-plaintext highlighter-rouge">podspec</code> is “a particular product’s ingredients list”, and <code class="language-plaintext highlighter-rouge">specs</code> would be “an aisle inside a supermarket” where particular set of products are found, for example, dairies or fresh fruits.
+Sample sentences would then look like “we consume what is in the shopping list”, “we refer to product’s ingredients list to see if it is indeed what we want”, “we check different catalogs to see if a product we want is found there”.</p>
+
+<p>Thus <code class="language-plaintext highlighter-rouge">podspec</code> is the basic unit that every pod interacts with. It is the glue that holds together different aspects of Cocoapods. <code class="language-plaintext highlighter-rouge">Specs</code> and <code class="language-plaintext highlighter-rouge">podfile</code> help us define our intention towards pods.</p>
+
+<p>The common specs file should look familiar:</p>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">source 'https://github.com/CocoaPods/Specs.git'</code></pre></figure>
+
+<p>but we can also use a third party (for example, Artsy):</p>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">source 'https://github.com/artsy/Specs.git'</code></pre></figure>
+
+<p>or create our own:</p>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">source 'https://github.com.org/&lt;your username&gt;/&lt;your specs repo&gt;.git'</code></pre></figure>
+
+<h2 id="how-it-works">How it works</h2>
+
+<p>When you run <code class="language-plaintext highlighter-rouge">pod install</code>, Cocoapods parses every <code class="language-plaintext highlighter-rouge">specs</code> entry and goes through all the <code class="language-plaintext highlighter-rouge">podspec</code>s in order to locate and install their relative pods. In development pods, normally source paths are included in <code class="language-plaintext highlighter-rouge">podfile</code>, thus one can omit <code class="language-plaintext highlighter-rouge">specs</code> declaration.</p>
+
+<p>Note that a pod must be listed under one of the included <code class="language-plaintext highlighter-rouge">specs</code>, otherwise, Cocoapods will fail to (locate and consequently) install that pod.</p>
+
+<p>Note that I am using this legend in the following guide:</p>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">'ABC', 'DEF' are names of imaginary pods
+'XYZ' is the name of imaginary specs</code></pre></figure>
+
+<h3 id="development-private-pods">Development (private) pods</h3>
+
+<p>It is a pod which is internally being developed. It may end up in the global Cocoapods <code class="language-plaintext highlighter-rouge">specs</code>, if, for example, we desire to open-source it.</p>
+
+<p>Structure of podfile and podspec:</p>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// Podfile
+target 'MyProject' do
+  pod 'ABC', :path =&gt; '../'
+end</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// Podspec
+Pod::Spec.new do |s|
+s.name = 'ABC'
+s.source_files = 'ABC/Classes/**/*'
+
+// dependency pods, if any
+s.dependency 'SnapKit'
+...
+
+// other details of the pod
+...
+end</code></pre></figure>
+
+<p><img src="/images/dev-pod.png" alt="image-title-here" class="img-responsive" /></p>
+
+<p>Development pods are better maintained through <code class="language-plaintext highlighter-rouge">specs</code>. I discuss these steps further below.</p>
+
+<h3 id="public-pods">Public pods</h3>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// Podfile
+// include every other specs where the pods are referenced
+source 'https://github.com/CocoaPods/Specs.git'
+
+target 'MyProject' do
+  pod 'ABC', '&gt;0.1.1'
+end</code></pre></figure>
+
+<p>Podspec is the same as development pod.</p>
+
+<p><img src="/images/public-pod.png" alt="image-title-here" class="img-responsive" /></p>
+
+<h3 id="create-and-maintain-pod-and-specs">Create and maintain pod and specs</h3>
+
+<p>This is the summary of the steps to follow. Further below are the detailed explanations of each step.</p>
+
+<h4 id="specs-repo">Specs repo</h4>
+<ul>
+  <li>prepare a remote repo (ie, bitbucket, github) for <code class="language-plaintext highlighter-rouge">specs</code></li>
+  <li>add it as a <code class="language-plaintext highlighter-rouge">specs</code> repo</li>
+</ul>
+
+<h4 id="pod-repo">Pod repo</h4>
+<ul>
+  <li>prepare a remote repo (ie, bitbucket, github) for a private pod</li>
+  <li>create a pod</li>
+  <li>add this pod as a child of the <code class="language-plaintext highlighter-rouge">specs</code> repo</li>
+</ul>
+
+<h4 id="on-a-regular-basis-as-many-times-as-needed">On a regular basis (as many times as needed)</h4>
+<ul>
+  <li>commit, tag and push your pod’s changes</li>
+  <li>push your pod to the <code class="language-plaintext highlighter-rouge">specs</code> repo</li>
+</ul>
+
+<h3 id="specs-repo-detailed">Specs repo (detailed)</h3>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// create an empty repo and push it to remote
+echo "This is a sample specs repo" &gt;&gt; README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin &lt;remote repo where you want to store the specs&gt;
+git push -u origin master</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// inform Cocoapods that you intend to use this as a podspec repo
+// create new 'specs repo': a local copy will be created as well (ie in ~/.cocoapods/repos/...)
+pod repo add XYZ &lt;the remote repo of the specs&gt;
+
+// (optional) navigate there and check if all pods are 'correct'
+pod repo lint . </code></pre></figure>
+
+<h4 id="pod-repo-1">Pod repo</h4>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// create a private pod
+pod lib create ABC
+
+// inform Cocoapods that it is a private pod
+pod lib lint ABC.podspec --private 
+
+pod install --verbose</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// introduce the pod to your remote repo
+git remote add origin &lt;remote repo where you want to store the pod&gt;
+
+git push -u origin master
+(eventual changes must be regularly added to git, and pushed to remote)</code></pre></figure>
+
+<h4 id="on-a-regular-basis">On a regular basis</h4>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// tag and push relative info to remote. 
+// Note. This must be the same as the one specified in the project's podspec file
+git tag 1.0.1 
+git push origin --tags
+
+// commit and push source code, if any different</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-txt" data-lang="txt">// lint and push the private repo to the container
+// (optional)
+pod spec lint ABC.podspec --verbose --allow-warnings 
+
+pod repo push XYZ ABC.podspec --verbose --allow-warnings</code></pre></figure>
+
+<p>Additional notes:</p>
+
+<ul>
+  <li>
+    <p>running <code class="language-plaintext highlighter-rouge">pod install</code> on an already installed pod causes it to be updated or removed</p>
+  </li>
+  <li>
+    <p>while developing own pod, in order for local and remote copies to communicate with each other, their versions must match</p>
+  </li>
+  <li>
+    <p>setting the dependency in a podspec and a podfile have a slightly different syntax, but they carry the same purpose</p>
+  </li>
+  <li>
+    <p>pod dependency between projects: while adding a pod to your project, that pod’s dependencies will be installed in the same directory with your project’s own dependencies (from the project’s point of view these pods have no preference over each other)</p>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">specs</code> repo being public means that the pods listed in it are publicly visible (but it doesn’t necessarily mean these pods are open-sourced)</p>
+  </li>
+  <li>
+    <p>importing Objective-C pod into Swift project does not require bridge-header, as long as you specify ‘use_frameworks!’ in the podfile</p>
+  </li>
+</ul>
+
+:ET
