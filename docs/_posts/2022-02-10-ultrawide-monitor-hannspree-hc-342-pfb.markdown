@@ -6,7 +6,6 @@ categories: articles
 
 ---
 
-## Searching a monitor
 I thought for a while what monitor type to choose. I made research online what kind would serve me, a mobile software engineer, best. I want to get maximum productivity from my monitor, my monitor must be there for me for multitasking, must have a decent quality and not be super expensive.
 
 
